@@ -14,7 +14,7 @@
 
         <!-- Tabel -->
         <div style="flex: 1 1 500px; max-width: 600px; background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 20px;">
-            <h3 style="text-align: center;">Daftar Perangkat</h3>
+            <h3 style="text-align: center;">List Perangkat</h3>
             <p><strong>Total: {{ $data->sum('total') }} Perangkat</strong></p>
             <div style="max-height: 350px; overflow-y: auto;">
                 <table style="width: 100%; border-collapse: collapse;">
