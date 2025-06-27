@@ -30,10 +30,7 @@ Route::middleware(['auth'])->group(function () {
         return view('branchless.register');
     })->name('branchless.register');
 
-    Route::get('/branchless/update', function () {
-        return view('branchless.update');
-    })->name('branchless.update');
-
+   
     Route::get('/branchless/register', [BranchlessController::class, 'create'])->name('branchless.register');
     Route::post('/branchless/register', [BranchlessController::class, 'store'])->name('branchless.register.submit');
 
