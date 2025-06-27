@@ -48,7 +48,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/branchless/export', [BranchlessController::class, 'export'])->name('branchless.export');
 
     Route::get('/branchless/log/export', [BranchlessLogController::class, 'export'])->name('branchless.log.export');
-    Route::put('/branchless/update/{id}', [BranchlessController::class, 'update'])->name('branchless.update');
+    
 
     Route::post('/branchless/store', [BranchlessController::class, 'store'])->name('branchless.store');
 
