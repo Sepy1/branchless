@@ -162,28 +162,43 @@
 
         const label = [];
         const data = [];
+        const API_TOKEN = "semangatpagi";
         let counter = 0;
 
         bulanList.forEach((bulan, idx) => {
+          
             const url = `https://branchless.bkkjateng.co.id/api/summary-bulanan?bulan=${bulan}&tahun=${tahun}${kodeKantor ? `&kode_kantor=${kodeKantor}` : ''}`;
-            fetch(url)
-                .then(response => response.json())
-                .then(res => {
-                    label[idx] = bulanNama[idx];
-                    data[idx] = res.data?.jumlah_transaksi ?? 0;
-                })
-                .catch(() => {
-                    label[idx] = bulanNama[idx];
-                    data[idx] = 0;
-                })
-                .finally(() => {
-                    counter++;
-                    if (counter === bulanList.length) {
-                        renderBarChart(label, data, kodeKantor);
-                        $('#spinner').hide();
-                    }
-                });
-        });
+            
+            
+            
+           
+    fetch(url, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${API_TOKEN}`
+        }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        return response.json();
+    })
+    .then(res => {
+        label[idx] = bulanNama[idx];
+        data[idx] = res.data?.jumlah_transaksi ?? 0;
+    })
+    .catch((err) => {
+        console.warn(`Gagal fetch data bulan ${bulan}:`, err.message);
+        label[idx] = bulanNama[idx];
+        data[idx] = 0;
+    })
+    .finally(() => {
+        counter++;
+        if (counter === bulanList.length) {
+            renderBarChart(label, data, kodeKantor);
+            $('#spinner').hide();
+        }
+    });
+});
     }
 
     $(document).ready(function () {
