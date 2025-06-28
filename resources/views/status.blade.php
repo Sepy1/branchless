@@ -37,57 +37,45 @@
         </div>
     </div>
 
-    <!-- Filter Dropdown -->
-   
+    <!-- FILTER + SPINNER -->
+    <div style="margin-top: 20px; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+        <form id="filterForm" style="display: flex; align-items: center; gap: 8px;">
+            <label for="kode_kantor"><strong>Filter Kode Kantor:</strong></label>
+            <select id="kode_kantor" name="kode_kantor" class="form-select form-select-sm" style="width: 120px;">
+                <option value="">-- Semua --</option>
+                @foreach ($labels as $kode)
+                    <option value="{{ $kode }}">{{ $kode }}</option>
+                @endforeach
+            </select>
+        </form>
+        <div id="globalSpinner" style="display: none;">
+            <div class="spinner-border text-primary" role="status" style="width: 2rem; height: 2rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    </div>
 
-    <!-- BAR CHART -->
-    <div style="margin-top: 20px;">
-    <div style="background: #ffffff; border: 1px solid #ccc; border-radius: 10px; padding: 20px;">
-        
-        <!-- Judul dan Filter dalam satu baris -->
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 20px;">
-            <!-- Filter Kode Kantor -->
-           <form id="filterForm" style="display: flex; align-items: center; gap: 8px; margin: 0;">
-    <label for="kode_kantor" style="margin: 0;"><strong>Filter Kode Kantor:</strong></label>
-    <select id="kode_kantor" name="kode_kantor" class="form-select form-select-sm" style="width: 100px;">
-        <option value="">-- Semua --</option>
-        @foreach ($labels as $kode)
-            <option value="{{ $kode }}">{{ $kode }}</option>
-        @endforeach
-    </select>
-</form>
-
-
-            <!-- Judul -->
-            <h3 id="chartTitle" style="text-align: right; margin: 0; flex: 1; text-align: center;">
-                Frekuensi Transaksi 6 Bulan Terakhir
-            </h3>
+    <!-- 2 BAR CHART DALAM 1 BARIS -->
+    <div style="margin-top: 20px; display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;">
+        <!-- Chart Frekuensi Transaksi -->
+        <div style="flex: 1 1 500px; max-width: 600px; background: #fff; border: 1px solid #ccc; border-radius: 10px; padding: 20px;">
+            <h3 id="chartTitle" style="text-align: center;">Frekuensi Transaksi 6 Bulan Terakhir</h3>
+            <div style="position: relative; height: 250px;">
+                <canvas id="barChartBranchless" style="z-index: 1;"></canvas>
+            </div>
         </div>
 
-        <!-- Chart Container -->
-        <div style="position: relative; height: 400px;">
-            <!-- Spinner Center -->
-            <div id="spinner" style="
-                display: none;
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                z-index: 10;
-            ">
-                <div class="spinner-border text-primary" role="status" style="width: 2.5rem; height: 2.5rem;">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
+        <!-- Chart Total Nominal Transaksi -->
+        <div style="flex: 1 1 500px; max-width: 600px; background: #fff; border: 1px solid #ccc; border-radius: 10px; padding: 20px;">
+            <h3 id="nominalChartTitle" style="text-align: center;">Total Nominal Transaksi per Bulan</h3>
+            <div style="position: relative; height: 250px;">
+                <canvas id="nominalBarChart" style="z-index: 1;"></canvas>
             </div>
-
-            <!-- Canvas Chart -->
-            <canvas id="barChartBranchless" style="z-index: 1;"></canvas>
         </div>
     </div>
 </div>
-</div>
 
-<!-- Chart.js & jQuery -->
+<!-- CHART.JS & BOOTSTRAP -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -97,7 +85,8 @@
     const pieData = {!! json_encode($counts) !!};
     const finalPieLabels = pieLabels.map((label, index) => `${label} (${pieData[index]})`);
 
-    let pieChart;
+    let pieChart, barChart, nominalBarChart;
+
     function renderPieChart() {
         const ctx = document.getElementById('devicePieChart').getContext('2d');
         if (pieChart) pieChart.destroy();
@@ -122,7 +111,6 @@
         });
     }
 
-    let barChart;
     function renderBarChart(labels, data, kodeKantor = '') {
         const ctx = document.getElementById('barChartBranchless').getContext('2d');
         if (barChart) barChart.destroy();
@@ -143,67 +131,100 @@
                     y: { beginAtZero: true },
                     x: { title: { display: true, text: 'Bulan' } }
                 },
-                plugins: {
-                    legend: { display: false }
-                }
+                plugins: { legend: { display: false } }
             }
         });
 
-        const title = `Frekuensi Transaksi 6 Bulan Terakhir${kodeKantor ? ` (${kodeKantor})` : ''}`;
+        const title = kodeKantor ? `Frekuensi Transaksi 6 Bulan Terakhir (${kodeKantor})` : 'Frekuensi Transaksi 6 Bulan Terakhir (Semua)';
         document.getElementById('chartTitle').innerText = title;
     }
 
-    function fetchChartData(kodeKantor = '') {
-        $('#spinner').show();
+    function renderNominalChart(labels, data, kodeKantor = '') {
+        const ctx = document.getElementById('nominalBarChart').getContext('2d');
+        if (nominalBarChart) nominalBarChart.destroy();
+        nominalBarChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Total Nominal (Rp)',
+                    data: data,
+                    backgroundColor: '#28a745'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return 'Rp ' + value.toLocaleString('id-ID');
+                            }
+                        }
+                    },
+                    x: { title: { display: true, text: 'Bulan' } }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
 
-        const bulanList = [1, 2, 3, 4, 5, 6];
-        const tahun = 2025;
-        const bulanNama = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun'];
+        const title = kodeKantor ? `Total Nominal Transaksi per Bulan (${kodeKantor})` : 'Total Nominal Transaksi per Bulan (Semua)';
+        document.getElementById('nominalChartTitle').innerText = title;
+    }
+
+    function fetchChartData(kodeKantor = '') {
+        $('#globalSpinner').show();
+
+        const now = new Date();
+        const bulanList = [];
+        const bulanNama = [];
+        const tahun = now.getFullYear();
+
+        for (let i = 5; i >= 0; i--) {
+            const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            bulanList.push(date.getMonth() + 1);
+            bulanNama.push(date.toLocaleString('id-ID', { month: 'short' }));
+        }
 
         const label = [];
         const data = [];
+        const nominal = [];
         const API_TOKEN = "semangatpagi";
         let counter = 0;
 
         bulanList.forEach((bulan, idx) => {
-          
             const url = `https://branchless.bkkjateng.co.id/api/summary-bulanan?bulan=${bulan}&tahun=${tahun}${kodeKantor ? `&kode_kantor=${kodeKantor}` : ''}`;
-            
-            
-            
-           
-    fetch(url, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${API_TOKEN}`
-        }
-    })
-    .then(response => {
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        return response.json();
-    })
-    .then(res => {
-        label[idx] = bulanNama[idx];
-        data[idx] = res.data?.jumlah_transaksi ?? 0;
-    })
-    .catch((err) => {
-        console.warn(`Gagal fetch data bulan ${bulan}:`, err.message);
-        label[idx] = bulanNama[idx];
-        data[idx] = 0;
-    })
-    .finally(() => {
-        counter++;
-        if (counter === bulanList.length) {
-            renderBarChart(label, data, kodeKantor);
-            $('#spinner').hide();
-        }
-    });
-});
+            fetch(url, {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${API_TOKEN}` }
+            })
+            .then(response => response.json())
+            .then(res => {
+                label[idx] = bulanNama[idx];
+                data[idx] = res.data?.jumlah_transaksi ?? 0;
+                nominal[idx] = res.data?.total_pokok ?? 0;
+            })
+            .catch(() => {
+                label[idx] = bulanNama[idx];
+                data[idx] = 0;
+                nominal[idx] = 0;
+            })
+            .finally(() => {
+                counter++;
+                if (counter === bulanList.length) {
+                    renderBarChart(label, data, kodeKantor);
+                    renderNominalChart(label, nominal, kodeKantor);
+                    $('#globalSpinner').hide();
+                }
+            });
+        });
     }
 
     $(document).ready(function () {
         renderPieChart();
-        fetchChartData('001'); // load default kantor 001
+        fetchChartData('001');
     });
 
     $('#kode_kantor').on('change', function () {
@@ -215,5 +236,4 @@
         renderPieChart();
     });
 </script>
-
 @endsection
