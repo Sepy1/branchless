@@ -2,7 +2,7 @@
 
 @section('content')
 
-<div style="margin-top: 60px;">
+<div style="margin-top: 5px;">
 
 
 <h2 style="margin-bottom: 20px;">Log Perubahan Perangkat</h2>

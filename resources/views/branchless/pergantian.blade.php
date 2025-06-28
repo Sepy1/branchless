@@ -5,7 +5,7 @@
 
 
 
-<div style="padding: 20px;">
+<div style="padding: 5px;">
     <h2 style="margin-bottom: 20px;">Update Data Branchless</h2>
 
 {{-- 🔍 Form Pencarian Gabungan --}}

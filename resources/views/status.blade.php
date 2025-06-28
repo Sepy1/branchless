@@ -1,38 +1,20 @@
 @extends('layouts.app')
 
 @section('content')
-<div style="margin-top: 60px;">
-    <!-- PIE + TABEL -->
+<div style="margin-top: 5px;">
+    <!-- PIE + BAR CHART PERANGKAT -->
     <div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;">
         <!-- Pie Chart -->
         <div style="flex: 1 1 500px; max-width: 600px; background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 20px;">
-            <h3 style="text-align: center;">Distribusi Perangkat per Kode Kantor</h3>
-            <div style="position: relative; width: 100%; height: 350px;">
+            <div style="position: relative; width: 100%; height: 270px;">
                 <canvas id="devicePieChart"></canvas>
             </div>
         </div>
 
-        <!-- Tabel Perangkat -->
+        <!-- Bar Chart Perangkat -->
         <div style="flex: 1 1 500px; max-width: 600px; background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 20px;">
-            <h3 style="text-align: center;">List Perangkat</h3>
-            <p><strong>Total: {{ $data->sum('total') }} Perangkat</strong></p>
-            <div style="max-height: 350px; overflow-y: auto;">
-                <table style="width: 100%; border-collapse: collapse;">
-                    <thead style="position: sticky; top: 0; background-color: #f2f2f2;">
-                        <tr>
-                            <th style="padding: 10px; border: 1px solid #000; text-align: center;">Kode Kantor</th>
-                            <th style="padding: 10px; border: 1px solid #000; text-align: center;">Jumlah Perangkat</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($data as $item)
-                            <tr>
-                                <td style="padding: 10px; border: 1px solid #ccc; text-align: center;">{{ $item->kode_kantor }}</td>
-                                <td style="padding: 10px; border: 1px solid #ccc; text-align: center;">{{ $item->total }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+            <div style="position: relative; width: 100%; height: 270px;">
+                <canvas id="deviceBarChart"></canvas>
             </div>
         </div>
     </div>
@@ -55,27 +37,23 @@
         </div>
     </div>
 
-    <!-- 2 BAR CHART DALAM 1 BARIS -->
+    <!-- BAR CHARTS TRANSAKSI -->
     <div style="margin-top: 20px; display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;">
-        <!-- Chart Frekuensi Transaksi -->
         <div style="flex: 1 1 500px; max-width: 600px; background: #fff; border: 1px solid #ccc; border-radius: 10px; padding: 20px;">
-            <h3 id="chartTitle" style="text-align: center;">Frekuensi Transaksi 6 Bulan Terakhir</h3>
             <div style="position: relative; height: 250px;">
-                <canvas id="barChartBranchless" style="z-index: 1;"></canvas>
+                <canvas id="barChartBranchless"></canvas>
             </div>
         </div>
 
-        <!-- Chart Total Nominal Transaksi -->
         <div style="flex: 1 1 500px; max-width: 600px; background: #fff; border: 1px solid #ccc; border-radius: 10px; padding: 20px;">
-            <h3 id="nominalChartTitle" style="text-align: center;">Total Nominal Transaksi per Bulan</h3>
             <div style="position: relative; height: 250px;">
-                <canvas id="nominalBarChart" style="z-index: 1;"></canvas>
+                <canvas id="nominalBarChart"></canvas>
             </div>
         </div>
     </div>
 </div>
 
-<!-- CHART.JS & BOOTSTRAP -->
+<!-- CHART.JS & JQUERY -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -83,12 +61,15 @@
 <script>
     const pieLabels = {!! json_encode($labels) !!};
     const pieData = {!! json_encode($counts) !!};
+    const deviceLabels = {!! json_encode($data->pluck('kode_kantor')) !!};
+    const deviceCounts = {!! json_encode($data->pluck('total')) !!};
     const finalPieLabels = pieLabels.map((label, index) => `${label} (${pieData[index]})`);
 
-    let pieChart, barChart, nominalBarChart;
+    let pieChart, barChart, nominalBarChart, deviceBarChart;
 
     function renderPieChart() {
-        const ctx = document.getElementById('devicePieChart').getContext('2d');
+        const ctx = document.getElementById('devicePieChart')?.getContext('2d');
+        if (!ctx) return;
         if (pieChart) pieChart.destroy();
         pieChart = new Chart(ctx, {
             type: 'pie',
@@ -106,7 +87,51 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { position: 'bottom' } }
+                plugins: {
+                    legend: { display: false },
+                    title: {
+                        display: true,
+                        text: 'Distribusi Perangkat Branchless',
+                        font: { size: 14, weight: 'bold' }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderDeviceChart() {
+        const ctx = document.getElementById('deviceBarChart')?.getContext('2d');
+        if (!ctx) return;
+        if (deviceBarChart) deviceBarChart.destroy();
+        deviceBarChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: deviceLabels,
+                datasets: [{
+                    label: 'Jumlah Perangkat',
+                    data: deviceCounts,
+                    backgroundColor: '#ffc107',
+                    barThickness: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Jumlah Perangkat' }
+                    },
+                    x: { title: { display: true, text: 'Kode Kantor' } }
+                },
+                plugins: {
+                    legend: { display: false },
+                    title: {
+                        display: true,
+                        text: 'Jumlah Perangkat per Kode Kantor',
+                        font: { size: 14, weight: 'bold' }
+                    }
+                }
             }
         });
     }
@@ -114,6 +139,7 @@
     function renderBarChart(labels, data, kodeKantor = '') {
         const ctx = document.getElementById('barChartBranchless').getContext('2d');
         if (barChart) barChart.destroy();
+        const title = kodeKantor ? `Frekuensi Transaksi Jan - Des (${kodeKantor})` : 'Frekuensi Transaksi Jan - Des (Semua)';
         barChart = new Chart(ctx, {
             type: 'bar',
             data: {
@@ -121,7 +147,8 @@
                 datasets: [{
                     label: 'Jumlah Transaksi',
                     data: data,
-                    backgroundColor: '#007bff'
+                    backgroundColor: '#007bff',
+                    barThickness: 20
                 }]
             },
             options: {
@@ -131,17 +158,22 @@
                     y: { beginAtZero: true },
                     x: { title: { display: true, text: 'Bulan' } }
                 },
-                plugins: { legend: { display: false } }
+                plugins: {
+                    legend: { display: false },
+                    title: {
+                        display: true,
+                        text: title,
+                        font: { size: 14, weight: 'bold' }
+                    }
+                }
             }
         });
-
-        const title = kodeKantor ? `Frekuensi Transaksi 6 Bulan Terakhir (${kodeKantor})` : 'Frekuensi Transaksi 6 Bulan Terakhir (Semua)';
-        document.getElementById('chartTitle').innerText = title;
     }
 
     function renderNominalChart(labels, data, kodeKantor = '') {
         const ctx = document.getElementById('nominalBarChart').getContext('2d');
         if (nominalBarChart) nominalBarChart.destroy();
+        const title = kodeKantor ? `Total Nominal Transaksi Jan - Des (${kodeKantor})` : 'Total Nominal Transaksi Jan - Des (Semua)';
         nominalBarChart = new Chart(ctx, {
             type: 'bar',
             data: {
@@ -149,7 +181,8 @@
                 datasets: [{
                     label: 'Total Nominal (Rp)',
                     data: data,
-                    backgroundColor: '#28a745'
+                    backgroundColor: '#28a745',
+                    barThickness: 20
                 }]
             },
             options: {
@@ -166,35 +199,43 @@
                     },
                     x: { title: { display: true, text: 'Bulan' } }
                 },
-                plugins: { legend: { display: false } }
+                plugins: {
+                    legend: { display: false },
+                    title: {
+                        display: true,
+                        text: title,
+                        font: { size: 14, weight: 'bold' }
+                    }
+                }
             }
         });
-
-        const title = kodeKantor ? `Total Nominal Transaksi per Bulan (${kodeKantor})` : 'Total Nominal Transaksi per Bulan (Semua)';
-        document.getElementById('nominalChartTitle').innerText = title;
     }
 
     function fetchChartData(kodeKantor = '') {
         $('#globalSpinner').show();
 
         const now = new Date();
-        const bulanList = [];
-        const bulanNama = [];
+        const bulanList = Array.from({ length: 12 }, (_, i) => i + 1);
+        const bulanNama = bulanList.map(bulan => new Date(0, bulan - 1).toLocaleString('id-ID', { month: 'short' }));
         const tahun = now.getFullYear();
 
-        for (let i = 5; i >= 0; i--) {
-            const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            bulanList.push(date.getMonth() + 1);
-            bulanNama.push(date.toLocaleString('id-ID', { month: 'short' }));
-        }
-
-        const label = [];
-        const data = [];
-        const nominal = [];
+        const label = [...bulanNama];
+        const data = Array(12).fill(0);
+        const nominal = Array(12).fill(0);
         const API_TOKEN = "semangatpagi";
         let counter = 0;
 
         bulanList.forEach((bulan, idx) => {
+            if (bulan > now.getMonth() + 1) {
+                counter++;
+                if (counter === 12) {
+                    renderBarChart(label, data, kodeKantor);
+                    renderNominalChart(label, nominal, kodeKantor);
+                    $('#globalSpinner').hide();
+                }
+                return;
+            }
+
             const url = `https://branchless.bkkjateng.co.id/api/summary-bulanan?bulan=${bulan}&tahun=${tahun}${kodeKantor ? `&kode_kantor=${kodeKantor}` : ''}`;
             fetch(url, {
                 method: 'GET',
@@ -202,18 +243,16 @@
             })
             .then(response => response.json())
             .then(res => {
-                label[idx] = bulanNama[idx];
                 data[idx] = res.data?.jumlah_transaksi ?? 0;
                 nominal[idx] = res.data?.total_pokok ?? 0;
             })
             .catch(() => {
-                label[idx] = bulanNama[idx];
                 data[idx] = 0;
                 nominal[idx] = 0;
             })
             .finally(() => {
                 counter++;
-                if (counter === bulanList.length) {
+                if (counter === 12) {
                     renderBarChart(label, data, kodeKantor);
                     renderNominalChart(label, nominal, kodeKantor);
                     $('#globalSpinner').hide();
@@ -224,6 +263,7 @@
 
     $(document).ready(function () {
         renderPieChart();
+        renderDeviceChart();
         fetchChartData('001');
     });
 
@@ -234,6 +274,7 @@
 
     window.addEventListener('resize', () => {
         renderPieChart();
+        renderDeviceChart();
     });
 </script>
 @endsection
