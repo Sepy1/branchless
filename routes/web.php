@@ -38,7 +38,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/branchless/pergantian', [BranchlessController::class, 'index'])->name('branchless.pergantian');
     Route::post('/branchless/delete/{id}', [BranchlessController::class, 'destroy'])->name('branchless.delete');
     Route::get('/branchless/edit/{id}', [BranchlessController::class, 'edit'])->name('branchless.edit');
-  //  Route::post('/branchless/update/{id}', [BranchlessController::class, 'update'])->name('branchless.update');
+    Route::post('/branchless/update/{id}', [BranchlessController::class, 'update'])->name('branchless.update');
     Route::put('/branchless/update/{id}', [BranchlessController::class, 'update'])->name('branchless.update');
 
 
