@@ -50,14 +50,36 @@
 
     <!-- Bar Chart -->
     <div style="margin-top: 20px;">
-        <div style="background: #ffffff; border: 1px solid #ccc; border-radius: 10px; padding: 20px;">
+        <div style="background: #ffffff; border: 1px solid #ccc; border-radius: 10px; padding: 20px; position: relative;">
             <h3 id="chartTitle" style="text-align: center;">Frekuensi Transaksi 6 Bulan Terakhir</h3>
+
+            <!-- Spinner di bawah judul -->
+            <div id="loadingSpinner" style="text-align: center; margin: 10px 0; display: none;">
+                <div class="spinner" style="
+                    display: inline-block;
+                    width: 30px;
+                    height: 30px;
+                    border: 4px solid #ccc;
+                    border-top: 4px solid #007bff;
+                    border-radius: 50%;
+                    animation: spin 1s linear infinite;
+                "></div>
+            </div>
+
             <div style="position: relative; height: 400px;">
                 <canvas id="barChartBranchless"></canvas>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Spinner Animation CSS -->
+<style>
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+</style>
 
 <!-- Chart.js & jQuery -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -97,10 +119,7 @@
     }
 
     // === BAR CHART ===
-    const bulanLabels = {!! json_encode($namaBulan) !!};
-    const jumlahTransaksi = {!! json_encode($jumlahTransaksi) !!};
     let barChart;
-
     function renderBarChart(labels, data, kodeKantor = '') {
         const ctx = document.getElementById('barChartBranchless').getContext('2d');
         if (barChart) barChart.destroy();
@@ -111,7 +130,7 @@
                 datasets: [{
                     label: 'Jumlah Transaksi',
                     data: data,
-                    backgroundColor: '#007bff'
+                    backgroundColor: '#4285F4'
                 }]
             },
             options: {
@@ -132,32 +151,51 @@
             }
         });
 
-        const title = `Frekuensi Transaksi 6 Bulan Terakhir` + (kodeKantor ? ` (${kodeKantor})` : '');
-        document.getElementById('chartTitle').innerText = title;
+        document.getElementById('chartTitle').innerText = `Frekuensi Transaksi 6 Bulan Terakhir ${kodeKantor ? `(${kodeKantor})` : ''}`;
     }
+
+    // === LOAD DATA FROM API ===
+    $('#kode_kantor').on('change', function () {
+        const kode = $(this).val();
+        if (!kode) return;
+
+        $('#loadingSpinner').show();
+
+        const tahun = new Date().getFullYear();
+        const bulanAngka = [1, 2, 3, 4, 5, 6];
+        const bulanNama = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun'];
+        const jumlahData = [];
+        let selesai = 0;
+
+        bulanAngka.forEach((bulan, i) => {
+            fetch(`http://192.176.1.46:5000/api/summary-bulanan?bulan=${bulan}&tahun=${tahun}&kode_kantor=${kode}`)
+                .then(res => res.ok ? res.json() : Promise.reject())
+                .then(json => {
+                    jumlahData[i] = json.data?.jumlah_transaksi ?? 0;
+                })
+                .catch(() => {
+                    jumlahData[i] = 0;
+                })
+                .finally(() => {
+                    selesai++;
+                    if (selesai === bulanAngka.length) {
+                        renderBarChart(bulanNama, jumlahData, kode);
+                        $('#loadingSpinner').hide();
+                    }
+                });
+        });
+    });
 
     // === INITIAL RENDER ===
     document.addEventListener('DOMContentLoaded', () => {
         renderPieChart();
-        renderBarChart(bulanLabels, jumlahTransaksi);
+        renderBarChart(['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun'], {!! json_encode($jumlahTransaksi) !!});
     });
 
-    // === AJAX FILTERING ===
-    $('#kode_kantor').on('change', function () {
-        const kode = $(this).val();
-        $.ajax({
-            url: '{{ url("/status/chart-data") }}',
-            data: { kode_kantor: kode },
-            success: function (res) {
-                renderBarChart(res.labels, res.data, res.kode);
-            }
-        });
-    });
-
-    // Resize handling
+    // === RESIZE EVENT ===
     window.addEventListener('resize', () => {
         renderPieChart();
-        renderBarChart(bulanLabels, jumlahTransaksi);
+        renderBarChart(['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun'], {!! json_encode($jumlahTransaksi) !!});
     });
 </script>
 @endsection
