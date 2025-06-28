@@ -165,7 +165,7 @@
         let counter = 0;
 
         bulanList.forEach((bulan, idx) => {
-            const url = `http://192.176.1.46:5000/api/summary-bulanan?bulan=${bulan}&tahun=${tahun}${kodeKantor ? `&kode_kantor=${kodeKantor}` : ''}`;
+            const url = `https://branchless.bkkjateng.co.id/api/summary-bulanan?bulan=${bulan}&tahun=${tahun}${kodeKantor ? `&kode_kantor=${kodeKantor}` : ''}`;
             fetch(url)
                 .then(response => response.json())
                 .then(res => {
