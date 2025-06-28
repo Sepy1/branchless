@@ -142,7 +142,7 @@
         <aside id="sidebar" class="sidebar">
             <h2>Dashboard Branchless</h2>
             <nav>
-                <a href="{{ route('status') }}">Informasi</a>
+                <a href="{{ route('status') }}">Informasi iiiii</a>
                 <a href="{{ route('branchless.pergantian') }}">Nominatif Branchless</a>
                 <a href="{{ route('branchless.log') }}">Log Perubahan Perangkat</a>
                 <a href="{{ route('logout') }}"
