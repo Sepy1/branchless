@@ -7,20 +7,21 @@
         <div style="flex: 1 1 1000px; max-width: 1200px; background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 20px;">
             <div style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
                 <h5 style="margin: 0;">Frekuensi & Total Transaksi Branchless per Kantor</h5>
-                <select id="bulan_summary" class="form-select form-select-sm" style="width: 200px;">
-                    @for ($i = 1; $i <= 12; $i++)
-                        <option value="{{ $i }}" {{ $i === now()->month ? 'selected' : '' }}>
-                            {{ \Carbon\Carbon::create()->month($i)->locale('id')->translatedFormat('F') }}
-                        </option>
-                    @endfor
-                </select>
+                <div style="display: flex; gap: 10px;">
+                    <select id="bulan_summary" class="form-select form-select-sm" style="width: 200px;">
+                        @for ($i = 1; $i <= 12; $i++)
+                            <option value="{{ $i }}" {{ $i === now()->month ? 'selected' : '' }}>
+                                {{ \Carbon\Carbon::create()->month($i)->locale('id')->translatedFormat('F') }}
+                            </option>
+                        @endfor
+                    </select>
+                    <button id="exportSummaryExcel" class="btn btn-sm btn-success">Export Excel</button>
+                </div>
             </div>
             <div style="position: relative; width: 100%; height: 400px;">
                 <canvas id="monthlyOfficeChart"></canvas>
                 <div id="globalSpinner" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10;">
-                    <div class="spinner-border text-primary" role="status" style="width: 2rem; height: 2rem;">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
+                    <div class="spinner-border text-primary" role="status" style="width: 2rem; height: 2rem;"></div>
                 </div>
             </div>
         </div>
@@ -29,6 +30,9 @@
     <!-- BAR CHART JUMLAH PERANGKAT -->
     <div style="margin-top: 20px; display: flex; justify-content: center;">
         <div style="flex: 1 1 1000px; max-width: 1200px; background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 20px;">
+            <div style="display: flex; justify-content: end; margin-bottom: 10px;">
+                <button id="exportPerangkatExcel" class="btn btn-sm btn-success">Export Excel</button>
+            </div>
             <div style="position: relative; width: 100%; height: 270px;">
                 <canvas id="deviceBarChart"></canvas>
             </div>
@@ -40,7 +44,6 @@
         <form id="filterForm" style="display: flex; align-items: center; gap: 8px;">
             <label for="kode_kantor"><strong>Filter Kode Kantor:</strong></label>
             <select id="kode_kantor" name="kode_kantor" class="form-select form-select-sm" style="width: 120px;">
-                {{-- Opsi semua dihapus --}}
                 @foreach ($labels as $kode)
                     <option value="{{ $kode }}" {{ $kode === '001' ? 'selected' : '' }}>{{ $kode }}</option>
                 @endforeach
@@ -50,39 +53,41 @@
     <div style="margin-top: 20px; display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;">
         <!-- FREKUENSI -->
         <div style="flex: 1 1 500px; max-width: 600px; background: #fff; border: 1px solid #ccc; border-radius: 10px; padding: 20px; position: relative;">
+            <div style="display: flex; justify-content: end; margin-bottom: 10px;">
+                <button id="exportFrekuensiExcel" class="btn btn-sm btn-success">Export Excel</button>
+            </div>
             <div style="position: relative; height: 250px;">
                 <canvas id="barChartBranchless"></canvas>
                 <div id="frekuensiSpinner" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10;">
-                    <div class="spinner-border text-primary" role="status" style="width: 2rem; height: 2rem;">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
+                    <div class="spinner-border text-primary" role="status" style="width: 2rem; height: 2rem;"></div>
                 </div>
             </div>
         </div>
 
         <!-- NOMINAL -->
         <div style="flex: 1 1 500px; max-width: 600px; background: #fff; border: 1px solid #ccc; border-radius: 10px; padding: 20px; position: relative;">
+            <div style="display: flex; justify-content: end; margin-bottom: 10px;">
+                <button id="exportNominalExcel" class="btn btn-sm btn-success">Export Excel</button>
+            </div>
             <div style="position: relative; height: 250px;">
                 <canvas id="nominalBarChart"></canvas>
                 <div id="nominalSpinner" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10;">
-                    <div class="spinner-border text-success" role="status" style="width: 2rem; height: 2rem;">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
+                    <div class="spinner-border text-success" role="status" style="width: 2rem; height: 2rem;"></div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- CHART.JS & JQUERY -->
+<!-- LIBRARY -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <script>
     const deviceLabels = {!! json_encode($data->pluck('kode_kantor')) !!};
     const deviceCounts = {!! json_encode($data->pluck('total')) !!};
     const kodeKantorList = Array.from({ length: 28 }, (_, i) => (i + 1).toString().padStart(3, '0'));
-
     let barChart, nominalBarChart, deviceBarChart, monthlyOfficeChart;
 
     function renderDeviceChart() {
@@ -232,6 +237,44 @@
             }
         });
     }
+
+    function exportToExcel(headers, labels, data, filename) {
+        const rows = [headers];
+        labels.forEach((label, idx) => {
+            rows.push([label, data[idx]]);
+        });
+        const worksheet = XLSX.utils.aoa_to_sheet(rows);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+        XLSX.writeFile(workbook, filename);
+    }
+
+    $('#exportPerangkatExcel').on('click', function () {
+        exportToExcel(['Kode Kantor', 'Jumlah Perangkat'], deviceLabels, deviceCounts, 'jumlah-perangkat.xlsx');
+    });
+
+    $('#exportFrekuensiExcel').on('click', function () {
+        if (barChart) {
+            exportToExcel(['Bulan', 'Jumlah Transaksi'], barChart.data.labels, barChart.data.datasets[0].data, 'frekuensi-transaksi.xlsx');
+        }
+    });
+
+    $('#exportNominalExcel').on('click', function () {
+        if (nominalBarChart) {
+            exportToExcel(['Bulan', 'Total Nominal'], nominalBarChart.data.labels, nominalBarChart.data.datasets[0].data, 'nominal-transaksi.xlsx');
+        }
+    });
+
+    $('#exportSummaryExcel').on('click', function () {
+        if (monthlyOfficeChart) {
+            exportToExcel(
+                ['Kode Kantor', 'Frekuensi', 'Total Nominal'],
+                monthlyOfficeChart.data.labels,
+                monthlyOfficeChart.data.datasets[0].data.map((val, idx) => [val, monthlyOfficeChart.data.datasets[1].data[idx]]),
+                'summary-transaksi.xlsx'
+            );
+        }
+    });
 
     function fetchMonthlyOfficeChart(bulan = null) {
         $('#globalSpinner').show();
