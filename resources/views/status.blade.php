@@ -27,6 +27,11 @@
         </div>
     </div>
 
+    <div style="margin-top: 10px; text-align: center;">
+        <div id="loadingMessage" style="display: none; font-weight: bold; color: #555;">
+            Mendownload Data Dari Server Mohon Menunggu...
+        </div>
+    </div>
     <!-- BAR CHART JUMLAH PERANGKAT -->
     <div style="margin-top: 20px; display: flex; justify-content: center;">
         <div style="flex: 1 1 1000px; max-width: 1200px; background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 20px;">
@@ -78,7 +83,6 @@
         </div>
     </div>
 </div>
-
 <!-- LIBRARY -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -241,7 +245,11 @@
     function exportToExcel(headers, labels, data, filename) {
         const rows = [headers];
         labels.forEach((label, idx) => {
-            rows.push([label, data[idx]]);
+            if (Array.isArray(data[idx])) {
+                rows.push([label, ...data[idx]]);
+            } else {
+                rows.push([label, data[idx]]);
+            }
         });
         const worksheet = XLSX.utils.aoa_to_sheet(rows);
         const workbook = XLSX.utils.book_new();
@@ -267,17 +275,14 @@
 
     $('#exportSummaryExcel').on('click', function () {
         if (monthlyOfficeChart) {
-            exportToExcel(
-                ['Kode Kantor', 'Frekuensi', 'Total Nominal'],
-                monthlyOfficeChart.data.labels,
-                monthlyOfficeChart.data.datasets[0].data.map((val, idx) => [val, monthlyOfficeChart.data.datasets[1].data[idx]]),
-                'summary-transaksi.xlsx'
-            );
+            const rows = monthlyOfficeChart.data.labels.map((label, idx) => [label, monthlyOfficeChart.data.datasets[0].data[idx], monthlyOfficeChart.data.datasets[1].data[idx]]);
+            exportToExcel(['Kode Kantor', 'Frekuensi', 'Total Nominal'], monthlyOfficeChart.data.labels, rows, 'summary-transaksi.xlsx');
         }
     });
 
     function fetchMonthlyOfficeChart(bulan = null) {
         $('#globalSpinner').show();
+        $('#loadingMessage').show();
         const now = new Date();
         const bulanAktif = bulan || now.getMonth() + 1;
         const tahun = now.getFullYear();
@@ -305,6 +310,7 @@
                 if (counter === kodeKantorList.length) {
                     renderMonthlyOfficeChart(kodeKantorList, frekuensiData, nominalData, bulanNama);
                     $('#globalSpinner').hide();
+                    $('#loadingMessage').hide();
                 }
             });
         });
@@ -312,6 +318,7 @@
 
     function fetchChartData(kodeKantor = '001') {
         $('#frekuensiSpinner, #nominalSpinner').show();
+        $('#loadingMessage').show();
         const now = new Date();
         const bulanList = Array.from({ length: 12 }, (_, i) => i + 1);
         const bulanNama = bulanList.map(b => new Date(0, b - 1).toLocaleString('id-ID', { month: 'short' }));
@@ -327,6 +334,7 @@
                     renderBarChart(bulanNama, data, kodeKantor);
                     renderNominalChart(bulanNama, nominal, kodeKantor);
                     $('#frekuensiSpinner, #nominalSpinner').hide();
+                    $('#loadingMessage').hide();
                 }
                 return;
             }
@@ -350,6 +358,7 @@
                     renderBarChart(bulanNama, data, kodeKantor);
                     renderNominalChart(bulanNama, nominal, kodeKantor);
                     $('#frekuensiSpinner, #nominalSpinner').hide();
+                    $('#loadingMessage').hide();
                 }
             });
         });
