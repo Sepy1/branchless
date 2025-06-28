@@ -38,7 +38,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/branchless/pergantian', [BranchlessController::class, 'index'])->name('branchless.pergantian');
     Route::post('/branchless/delete/{id}', [BranchlessController::class, 'destroy'])->name('branchless.delete');
     Route::get('/branchless/edit/{id}', [BranchlessController::class, 'edit'])->name('branchless.edit');
-    Route::post('/branchless/update/{id}', [BranchlessController::class, 'update'])->name('branchless.update');
+  //  Route::post('/branchless/update/{id}', [BranchlessController::class, 'update'])->name('branchless.update');
+    Route::put('/branchless/update/{id}', [BranchlessController::class, 'update'])->name('branchless.update');
+
 
     Route::get('/branchless/log', [BranchlessLogController::class, 'index'])->name('branchless.log');
     
@@ -69,6 +71,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    
 });
 
 require __DIR__.'/auth.php';

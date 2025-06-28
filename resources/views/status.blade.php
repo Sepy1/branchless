@@ -1,8 +1,8 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container" style="padding: 20px;">
-    <!-- Pie Chart dan Tabel -->
+<div style="margin-top: 60px;">
+    <!-- PIE + TABEL -->
     <div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;">
         <!-- Pie Chart -->
         <div style="flex: 1 1 500px; max-width: 600px; background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 20px;">
@@ -12,7 +12,7 @@
             </div>
         </div>
 
-        <!-- Tabel -->
+        <!-- Tabel Perangkat -->
         <div style="flex: 1 1 500px; max-width: 600px; background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 20px;">
             <h3 style="text-align: center;">List Perangkat</h3>
             <p><strong>Total: {{ $data->sum('total') }} Perangkat</strong></p>
@@ -38,58 +38,64 @@
     </div>
 
     <!-- Filter Dropdown -->
-    <form id="filter-form" style="margin-top: 30px; text-align: center;">
-        <label for="kode_kantor"><strong>Filter Kode Kantor:</strong></label>
-        <select id="kode_kantor" name="kode_kantor">
-            <option value="">-- Semua --</option>
-            @foreach ($labels as $kode)
-                <option value="{{ $kode }}">{{ $kode }}</option>
-            @endforeach
-        </select>
-    </form>
+   
 
-    <!-- Bar Chart -->
+    <!-- BAR CHART -->
     <div style="margin-top: 20px;">
-        <div style="background: #ffffff; border: 1px solid #ccc; border-radius: 10px; padding: 20px; position: relative;">
-            <h3 id="chartTitle" style="text-align: center;">Frekuensi Transaksi 6 Bulan Terakhir</h3>
+    <div style="background: #ffffff; border: 1px solid #ccc; border-radius: 10px; padding: 20px;">
+        
+        <!-- Judul dan Filter dalam satu baris -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 20px;">
+            <!-- Filter Kode Kantor -->
+           <form id="filterForm" style="display: flex; align-items: center; gap: 8px; margin: 0;">
+    <label for="kode_kantor" style="margin: 0;"><strong>Filter Kode Kantor:</strong></label>
+    <select id="kode_kantor" name="kode_kantor" class="form-select form-select-sm" style="width: 100px;">
+        <option value="">-- Semua --</option>
+        @foreach ($labels as $kode)
+            <option value="{{ $kode }}">{{ $kode }}</option>
+        @endforeach
+    </select>
+</form>
 
-            <!-- Spinner di bawah judul -->
-            <div id="loadingSpinner" style="text-align: center; margin: 10px 0; display: none;">
-                <div class="spinner" style="
-                    display: inline-block;
-                    width: 30px;
-                    height: 30px;
-                    border: 4px solid #ccc;
-                    border-top: 4px solid #007bff;
-                    border-radius: 50%;
-                    animation: spin 1s linear infinite;
-                "></div>
+
+            <!-- Judul -->
+            <h3 id="chartTitle" style="text-align: right; margin: 0; flex: 1; text-align: center;">
+                Frekuensi Transaksi 6 Bulan Terakhir
+            </h3>
+        </div>
+
+        <!-- Chart Container -->
+        <div style="position: relative; height: 400px;">
+            <!-- Spinner Center -->
+            <div id="spinner" style="
+                display: none;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                z-index: 10;
+            ">
+                <div class="spinner-border text-primary" role="status" style="width: 2.5rem; height: 2.5rem;">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
             </div>
 
-            <div style="position: relative; height: 400px;">
-                <canvas id="barChartBranchless"></canvas>
-            </div>
+            <!-- Canvas Chart -->
+            <canvas id="barChartBranchless" style="z-index: 1;"></canvas>
         </div>
     </div>
 </div>
-
-<!-- Spinner Animation CSS -->
-<style>
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-</style>
+</div>
 
 <!-- Chart.js & jQuery -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
 <script>
-    // === PIE CHART ===
-    const labels = {!! json_encode($labels) !!};
-    const data = {!! json_encode($counts) !!};
-    const finalLabels = labels.map((label, index) => `${label} (${data[index]})`);
+    const pieLabels = {!! json_encode($labels) !!};
+    const pieData = {!! json_encode($counts) !!};
+    const finalPieLabels = pieLabels.map((label, index) => `${label} (${pieData[index]})`);
 
     let pieChart;
     function renderPieChart() {
@@ -98,9 +104,9 @@
         pieChart = new Chart(ctx, {
             type: 'pie',
             data: {
-                labels: finalLabels,
+                labels: finalPieLabels,
                 datasets: [{
-                    data: data,
+                    data: pieData,
                     backgroundColor: [
                         '#007bff', '#28a745', '#dc3545', '#ffc107', '#17a2b8',
                         '#6610f2', '#e83e8c', '#6f42c1', '#20c997', '#fd7e14',
@@ -111,14 +117,11 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'bottom' }
-                }
+                plugins: { legend: { position: 'bottom' } }
             }
         });
     }
 
-    // === BAR CHART ===
     let barChart;
     function renderBarChart(labels, data, kodeKantor = '') {
         const ctx = document.getElementById('barChartBranchless').getContext('2d');
@@ -130,72 +133,72 @@
                 datasets: [{
                     label: 'Jumlah Transaksi',
                     data: data,
-                    backgroundColor: '#4285F4'
+                    backgroundColor: '#007bff'
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false }
-                },
                 scales: {
                     y: { beginAtZero: true },
-                    x: {
-                        title: {
-                            display: true,
-                            text: 'Bulan'
-                        }
-                    }
+                    x: { title: { display: true, text: 'Bulan' } }
+                },
+                plugins: {
+                    legend: { display: false }
                 }
             }
         });
 
-        document.getElementById('chartTitle').innerText = `Frekuensi Transaksi 6 Bulan Terakhir ${kodeKantor ? `(${kodeKantor})` : ''}`;
+        const title = `Frekuensi Transaksi 6 Bulan Terakhir${kodeKantor ? ` (${kodeKantor})` : ''}`;
+        document.getElementById('chartTitle').innerText = title;
     }
 
-    // === LOAD DATA FROM API ===
-    $('#kode_kantor').on('change', function () {
-        const kode = $(this).val();
-        if (!kode) return;
+    function fetchChartData(kodeKantor = '') {
+        $('#spinner').show();
 
-        $('#loadingSpinner').show();
-
-        const tahun = new Date().getFullYear();
-        const bulanAngka = [1, 2, 3, 4, 5, 6];
+        const bulanList = [1, 2, 3, 4, 5, 6];
+        const tahun = 2025;
         const bulanNama = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun'];
-        const jumlahData = [];
-        let selesai = 0;
 
-        bulanAngka.forEach((bulan, i) => {
-            fetch(`http://192.176.1.46:5000/api/summary-bulanan?bulan=${bulan}&tahun=${tahun}&kode_kantor=${kode}`)
-                .then(res => res.ok ? res.json() : Promise.reject())
-                .then(json => {
-                    jumlahData[i] = json.data?.jumlah_transaksi ?? 0;
+        const label = [];
+        const data = [];
+        let counter = 0;
+
+        bulanList.forEach((bulan, idx) => {
+            const url = `http://192.176.1.46:5000/api/summary-bulanan?bulan=${bulan}&tahun=${tahun}${kodeKantor ? `&kode_kantor=${kodeKantor}` : ''}`;
+            fetch(url)
+                .then(response => response.json())
+                .then(res => {
+                    label[idx] = bulanNama[idx];
+                    data[idx] = res.data?.jumlah_transaksi ?? 0;
                 })
                 .catch(() => {
-                    jumlahData[i] = 0;
+                    label[idx] = bulanNama[idx];
+                    data[idx] = 0;
                 })
                 .finally(() => {
-                    selesai++;
-                    if (selesai === bulanAngka.length) {
-                        renderBarChart(bulanNama, jumlahData, kode);
-                        $('#loadingSpinner').hide();
+                    counter++;
+                    if (counter === bulanList.length) {
+                        renderBarChart(label, data, kodeKantor);
+                        $('#spinner').hide();
                     }
                 });
         });
-    });
+    }
 
-    // === INITIAL RENDER ===
-    document.addEventListener('DOMContentLoaded', () => {
+    $(document).ready(function () {
         renderPieChart();
-        renderBarChart(['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun'], {!! json_encode($jumlahTransaksi) !!});
+        fetchChartData('001'); // load default kantor 001
     });
 
-    // === RESIZE EVENT ===
+    $('#kode_kantor').on('change', function () {
+        const kode = $(this).val();
+        fetchChartData(kode);
+    });
+
     window.addEventListener('resize', () => {
         renderPieChart();
-        renderBarChart(['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun'], {!! json_encode($jumlahTransaksi) !!});
     });
 </script>
+
 @endsection

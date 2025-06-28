@@ -2,7 +2,7 @@
 
 @section('content')
 
-
+<div style="margin-top: 60px;">
 
 
 <h2 style="margin-bottom: 20px;">Log Perubahan Perangkat</h2>
@@ -60,4 +60,6 @@
         </tbody>
     </table>
 </div>
+</div>
+
 @endsection
