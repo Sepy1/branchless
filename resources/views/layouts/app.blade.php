@@ -2,6 +2,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Branchless App</title>
 
     <style>
@@ -142,7 +143,7 @@
         <aside id="sidebar" class="sidebar">
             <h2>Dashboard Branchless</h2>
             <nav>
-                <a href="{{ route('status') }}">Dashboard</a>
+                {{-- Dashboard link hidden temporarily --}}
                 <a href="{{ route('branchless.pergantian') }}">Nominatif Branchless</a>
                 <a href="{{ route('branchless.log') }}">Log Perubahan Perangkat</a>
                 <a href="{{ route('logout') }}"

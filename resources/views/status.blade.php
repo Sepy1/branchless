@@ -292,10 +292,8 @@
         let counter = 0;
 
         kodeKantorList.forEach((kode, idx) => {
-            const url = `https://branchless.bkkjateng.co.id/api/summary-bulanan?bulan=${bulanAktif}&tahun=${tahun}&kode_kantor=${kode}`;
-            fetch(url, {
-                headers: { 'Authorization': 'Bearer semangatpagi' }
-            })
+            const url = `/api/summary-bulanan?bulan=${bulanAktif}&tahun=${tahun}&kode_kantor=${kode}`;
+            fetch(url)
             .then(res => res.json())
             .then(result => {
                 frekuensiData[idx] = result.data?.jumlah_transaksi ?? 0;
@@ -339,10 +337,8 @@
                 return;
             }
 
-            const url = `https://branchless.bkkjateng.co.id/api/summary-bulanan?bulan=${bulan}&tahun=${tahun}&kode_kantor=${kodeKantor}`;
-            fetch(url, {
-                headers: { 'Authorization': 'Bearer semangatpagi' }
-            })
+            const url = `/api/summary-bulanan?bulan=${bulan}&tahun=${tahun}&kode_kantor=${kodeKantor}`;
+            fetch(url)
             .then(res => res.json())
             .then(res => {
                 data[idx] = res.data?.jumlah_transaksi ?? 0;

@@ -21,7 +21,10 @@ use App\Http\Controllers\StatusController;
 
 Route::middleware(['auth'])->group(function () {
 
-     Route::get('/status', [StatusController::class, 'index'])->name('status');
+     // Dashboard (hidden) - redirect to nominatif branchless
+     Route::get('/status', function () {
+         return redirect()->route('branchless.pergantian');
+     })->name('status');
      Route::get('/status/chart-data', [StatusController::class, 'chartData']);
     
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -38,6 +41,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/branchless/pergantian', [BranchlessController::class, 'index'])->name('branchless.pergantian');
     Route::get('/branchless/template', [BranchlessController::class, 'downloadTemplate'])->name('branchless.template');
     Route::post('/branchless/import', [BranchlessController::class, 'import'])->name('branchless.import');
+    Route::post('/branchless/generate/{kode}', [App\Http\Controllers\BranchlessGenerateController::class, 'generate'])->name('branchless.generate');
     Route::post('/branchless/delete/{id}', [BranchlessController::class, 'destroy'])->name('branchless.delete');
     Route::get('/branchless/edit/{id}', [BranchlessController::class, 'edit'])->name('branchless.edit');
    // Route::post('/branchless/update/{id}', [BranchlessController::class, 'update'])->name('branchless.update');

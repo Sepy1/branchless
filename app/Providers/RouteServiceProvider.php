@@ -17,7 +17,7 @@ class RouteServiceProvider extends ServiceProvider
      *
      * @var string
      */
-    public const HOME = '/status';
+    public const HOME = '/branchless/pergantian';
 
     /**
      * Define your route model bindings, pattern filters, and other route configuration.

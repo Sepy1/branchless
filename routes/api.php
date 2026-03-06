@@ -17,3 +17,6 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
+
+// Summary endpoint for branchless transactions (month/year/kode_kantor)
+Route::get('/summary-bulanan', [\App\Http\Controllers\Api\SummaryController::class, 'summaryBulanan']);

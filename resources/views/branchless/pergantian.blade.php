@@ -61,7 +61,23 @@
         <input type="file" name="file" accept=".xlsx,.xls" style="display:inline-block;">
         <button type="submit" style="padding:6px 10px; background:#0a7; color:#fff; border:none; border-radius:4px; margin-left:6px;">Upload</button>
     </form>
+
+    {{-- Generate Branchless: pilih kantor dan panggil API eksternal (ditaruh di sebelah Upload) --}}
+    <div style="display:flex; gap:6px; align-items:center; margin-left:12px;">
+        <label for="generate-kantor" style="margin:0 6px 0 0;">Generate Branchless</label>
+        <select id="generate-kantor" style="padding:6px; border:1px solid #ccc; border-radius:4px;">
+            @for($i = 1; $i <= 28; $i++)
+                @php $kode = str_pad($i, 3, '0', STR_PAD_LEFT); @endphp
+                <option value="{{ $kode }}">{{ $kode }}</option>
+            @endfor
+        </select>
+        <button type="button" id="generate-btn" onclick="generateBranchless()"
+                style="padding:6px 12px; background:#007bff; color:#fff; border:none; border-radius:4px;">Generate</button>
+        <span id="generate-spinner" class="generate-spinner" aria-hidden="true"></span>
+    </div>
 </div>
+        
+
 
 
 
@@ -206,6 +222,29 @@
     </div>
 </div>
 
+    {{-- Modal Generate Response --}}
+    <div id="generateModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+         background-color: rgba(0,0,0,0.5); z-index:10000; justify-content:center; align-items:center;">
+        <div style="background:white; padding:20px; border-radius:8px; width:600px; max-width:95%; position:relative;">
+            <h3 style="margin-bottom: 10px;">Response Generate Branchless</h3>
+            <div style="margin-bottom:10px;">
+                <strong>Local (proxy) endpoint:</strong> <span id="generate-endpoint-local"></span>
+            </div>
+            <div style="margin-bottom:10px;">
+                <strong>Remote (external) endpoint:</strong> <span id="generate-endpoint-remote"></span>
+            </div>
+            <div style="margin-bottom:10px;">
+                <strong>Status:</strong> <span id="generate-status"></span>
+            </div>
+            <div style="margin-bottom:10px;">
+                <textarea id="generate-response" rows="10" style="width:100%; padding:8px; border:1px solid #ccc;"></textarea>
+            </div>
+            <div style="text-align:right;">
+                <button type="button" onclick="closeGenerateModal()" style="padding:6px 12px; background:gray; color:white; border:none; border-radius:4px;">Tutup</button>
+            </div>
+        </div>
+    </div>
+
 {{-- SCRIPT --}}
 <script>
     function openEditModal(device) {
@@ -230,6 +269,91 @@
 
     function closeAddModal() {
         document.getElementById('addModal').style.display = 'none';
+    }
+</script>
+
+<script>
+    function closeGenerateModal() {
+        const m = document.getElementById('generateModal');
+        if (m) m.style.display = 'none';
+    }
+
+    async function generateBranchless() {
+        const kode = document.getElementById('generate-kantor')?.value || '001';
+        const endpoint = `/branchless/generate/${kode}`;
+        const btn = document.getElementById('generate-btn');
+        const spinner = document.getElementById('generate-spinner');
+        if (btn) { btn.disabled = true; btn.textContent = 'Generating...'; }
+        if (spinner) { spinner.style.display = 'inline-block'; }
+        try {
+            const tokenMeta = document.querySelector('meta[name="csrf-token"]');
+            const csrf = tokenMeta ? tokenMeta.getAttribute('content') : '';
+
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrf,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                credentials: 'same-origin'
+            });
+
+            const status = res.status + ' ' + (res.statusText || '');
+            let text = '';
+            const ctype = res.headers.get('content-type') || '';
+            if (ctype.includes('application/json')) {
+                try { text = JSON.stringify(await res.json(), null, 2); } catch(e) { text = await res.text(); }
+            } else {
+                text = await res.text();
+            }
+
+            const remote = `http://192.176.1.10:5000/generate/${kode}`;
+            document.getElementById('generate-endpoint-local').textContent = endpoint;
+            document.getElementById('generate-endpoint-remote').textContent = remote;
+            document.getElementById('generate-status').textContent = status;
+            document.getElementById('generate-response').value = text;
+            if (res.ok) showToast('Generate berhasil', 'success'); else showToast('Generate gagal: ' + status, 'error');
+        } catch (err) {
+            const remote = `http://192.176.1.10:5000/generate/${kode}`;
+            document.getElementById('generate-endpoint-local').textContent = endpoint;
+            document.getElementById('generate-endpoint-remote').textContent = remote;
+            document.getElementById('generate-status').textContent = 'Error';
+            document.getElementById('generate-response').value = err.toString();
+            showToast('Generate gagal: ' + err.toString(), 'error');
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = 'Generate'; }
+            if (spinner) { spinner.style.display = 'none'; }
+            const m = document.getElementById('generateModal');
+            if (m) m.style.display = 'flex';
+        }
+    }
+</script>
+
+<!-- Spinner animation + Toast container + helper -->
+<style>
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.generate-spinner { display: none; width: 18px; height: 18px; margin-left: 8px; border: 3px solid rgba(0,0,0,0.12); border-top: 3px solid #007bff; border-radius: 50%; animation: spin 1s linear infinite; vertical-align: middle; }
+.app-toast { position: fixed; right: 20px; bottom: 20px; min-width: 220px; padding: 12px 16px; border-radius: 6px; color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.2); display:none; z-index:12000; }
+.app-toast.success { background: #28a745; }
+.app-toast.error { background: #dc3545; }
+</style>
+
+<div id="app-toast" class="app-toast"></div>
+
+<script>
+    function showToast(message, type = 'success') {
+        const t = document.getElementById('app-toast');
+        if (!t) return;
+        t.textContent = message;
+        t.className = 'app-toast ' + (type === 'error' ? 'error' : 'success');
+        t.style.display = 'block';
+        t.style.opacity = '1';
+        setTimeout(() => {
+            t.style.transition = 'opacity 0.4s';
+            t.style.opacity = '0';
+            setTimeout(() => t.style.display = 'none', 400);
+        }, 3000);
     }
 </script>
 
