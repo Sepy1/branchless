@@ -9,38 +9,59 @@
     <h2 style="margin-bottom: 20px;">Update Data Branchless</h2>
 
 {{-- 🔍 Form Pencarian Gabungan --}}
-<form method="GET" action="{{ route('branchless.pergantian') }}" style="margin-bottom: 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px;">
+<form method="GET" action="{{ route('branchless.pergantian') }}" style="margin-bottom: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px;">
     {{-- Input Pencarian --}}
-    <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari ID / Username / Nama "
-           style="padding: 6px; width: 250px;">
+        <input id="global-search" type="text" name="search" value="{{ request('search') }}" placeholder="Cari ID / Username / Nama "
+            style="padding: 6px; width: 250px;">
 
     {{-- Filter Kode Kantor --}}
-    <input type="text" name="filter_kantor" value="{{ request('filter_kantor') }}" placeholder="Filter Kode Kantor"
-           style="padding: 6px; width: 180px;">
+        <input id="filter-kode" type="text" name="filter_kantor" value="{{ request('filter_kantor') }}" placeholder="Filter Kode Kantor"
+            style="padding: 6px; width: 180px;">
 
-    {{-- Tombol Cari --}}
-    <button type="submit"
-            style="padding: 6px 12px; background-color: green; color: white; border: none; border-radius: 4px;">
-        Cari
-    </button>
-
-    <button type="button" onclick="window.location.href='{{ route('branchless.pergantian') }}'"
-        style="padding: 6px 12px; background-color: red; color: white; border: none; border-radius: 4px;">
-    Reset
-</button>
-
-    {{-- Tombol Export CSV (gunakan URL dengan query) --}}
-    <a href="{{ route('branchless.export', ['search' => request('search'), 'filter_kantor' => request('filter_kantor')]) }}"
-       style="padding: 6px 12px; background-color: #0800ff; color: white; text-decoration: none; border-radius: 4px;">
-        Export CSV
-    </a>
-
-    {{-- Tambah Perangkat --}}
+    {{-- Search is automatic on input (no submit/reset buttons) --}}
+    {{-- Tambah Perangkat (letakkan tombol lain di luar form untuk menghindari nested forms) --}}
     <button type="button" onclick="openAddModal()"
             style="padding: 6px 12px; background-color: rgb(56, 56, 231); color: white; border: none; border-radius: 4px;">
         Tambah Perangkat
     </button>
+    <a href="{{ route('branchless.export', ['search' => request('search'), 'filter_kantor' => request('filter_kantor')]) }}"
+       style="padding: 6px 12px; background-color: #0800ff; color: white; text-decoration: none; border-radius: 4px; margin-left:6px;">
+        Export (.xlsx)
+    </a>
 </form>
+
+{{-- Flash & Errors --}}
+@if(session('success'))
+    <div id="success-toast" style="margin:8px 0; padding:10px; background:#28a745; color:white; border-radius:6px;">{{ session('success') }}</div>
+@endif
+
+@if(session('error'))
+    <div style="margin:8px 0; padding:10px; background:#dc3545; color:white; border-radius:6px;">{{ session('error') }}</div>
+@endif
+
+@if($errors->any())
+    <div style="margin:8px 0; padding:10px; background:#ffc107; color:#000; border-radius:6px;">
+        <ul style="margin:0; padding-left:18px;">
+            @foreach($errors->all() as $err)
+                <li>{{ $err }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
+
+{{-- Actions: Export / Download Template / Upload --}}
+<div style="margin-bottom:12px; display:flex; gap:8px; align-items:center;">
+    <a href="{{ route('branchless.template') }}" download
+       style="padding:6px 12px; background:#6c757d; color:#fff; text-decoration:none; border-radius:4px;">
+        Unduh Template (.xlsx)
+    </a>
+
+    <form action="{{ route('branchless.import') }}" method="POST" enctype="multipart/form-data" style="display:inline-block; margin:0;">
+        @csrf
+        <input type="file" name="file" accept=".xlsx,.xls" style="display:inline-block;">
+        <button type="submit" style="padding:6px 10px; background:#0a7; color:#fff; border:none; border-radius:4px; margin-left:6px;">Upload</button>
+    </form>
+</div>
 
 
 
@@ -50,23 +71,41 @@
     @if($devices->isEmpty())
         <p>Tidak ada data ditemukan.</p>
     @else
-        {{-- ✅ Tabel Scrollable dengan Header Sticky --}}
-        <div style="max-height: 320px; overflow-y: auto; border: 1px solid #ccc;">
-            <table cellpadding="8" cellspacing="0" style="width: 100%; border-collapse: collapse;">
+        {{-- ✅ Tabel tinggi dinamis hingga batas bawah layar, dengan sorting dan filter --}}
+        <div id="devices-table-container" style="height: calc(100vh - 300px); overflow-y: auto; border: 1px solid #ccc;">
+            <table id="devices-table" cellpadding="8" cellspacing="0" style="width: 100%; border-collapse: collapse;">
                 <thead>
                     <tr style="background-color: #000000; color: white;">
-                        <th style="position: sticky; top: 0; background-color: #000;">ID Perangkat</th>
-                        <th style="position: sticky; top: 0; background-color: #000;">Merk HP</th>
-                        <th style="position: sticky; top: 0; background-color: #000;">Tipe HP</th>
-                        <th style="position: sticky; top: 0; background-color: #000;">Username</th>
-                        <th style="position: sticky; top: 0; background-color: #000;">Nama Lengkap</th>
-                        <th style="position: sticky; top: 0; background-color: #000;">Kode Kantor</th>
+                        <th style="position: sticky; top: 0; background-color: #000;">ID Perangkat
+                            <button class="sort-btn" onclick="sortTable(0, true)">▲</button>
+                            <button class="sort-btn" onclick="sortTable(0, false)">▼</button>
+                        </th>
+                        <th style="position: sticky; top: 0; background-color: #000;">Merk HP
+                            <button class="sort-btn" onclick="sortTable(1, true)">▲</button>
+                            <button class="sort-btn" onclick="sortTable(1, false)">▼</button>
+                        </th>
+                        <th style="position: sticky; top: 0; background-color: #000;">Tipe HP
+                            <button class="sort-btn" onclick="sortTable(2, true)">▲</button>
+                            <button class="sort-btn" onclick="sortTable(2, false)">▼</button>
+                        </th>
+                        <th style="position: sticky; top: 0; background-color: #000;">Username
+                            <button class="sort-btn" onclick="sortTable(3, true)">▲</button>
+                            <button class="sort-btn" onclick="sortTable(3, false)">▼</button>
+                        </th>
+                        <th style="position: sticky; top: 0; background-color: #000;">Nama Lengkap
+                            <button class="sort-btn" onclick="sortTable(4, true)">▲</button>
+                            <button class="sort-btn" onclick="sortTable(4, false)">▼</button>
+                        </th>
+                        <th style="position: sticky; top: 0; background-color: #000;">Kode Kantor
+                            <button class="sort-btn" onclick="sortTable(5, true)">▲</button>
+                            <button class="sort-btn" onclick="sortTable(5, false)">▼</button>
+                        </th>
                         <th style="position: sticky; top: 0; background-color: #000;">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($devices as $index => $device)
-                        <tr style="background-color: {{ $index % 2 == 0 ? '#f9f9f9' : '#ffffff' }};">
+                        <tr class="devices-row" style="background-color: {{ $index % 2 == 0 ? '#f9f9f9' : '#ffffff' }};">
                             <td>{{ $device->id_perangkat }}</td>
                             <td>{{ $device->merk_hp }}</td>
                             <td>{{ $device->tipe_hp }}</td>
@@ -192,6 +231,60 @@
     function closeAddModal() {
         document.getElementById('addModal').style.display = 'none';
     }
+</script>
+
+<script>
+    // Sorting and filtering for the devices table
+    function sortTable(colIndex, asc = true) {
+        const table = document.getElementById('devices-table');
+        const tbody = table.tBodies[0];
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+
+        rows.sort((a, b) => {
+            const A = a.cells[colIndex].innerText.trim().toLowerCase();
+            const B = b.cells[colIndex].innerText.trim().toLowerCase();
+            if (!isNaN(parseFloat(A)) && !isNaN(parseFloat(B))) {
+                return asc ? (parseFloat(A) - parseFloat(B)) : (parseFloat(B) - parseFloat(A));
+            }
+            return asc ? A.localeCompare(B) : B.localeCompare(A);
+        });
+
+        // re-append rows
+        rows.forEach(r => tbody.appendChild(r));
+    }
+
+    function filterTable() {
+        const table = document.getElementById('devices-table');
+        const tbody = table.tBodies[0];
+        const q = (document.getElementById('global-search')?.value || '').trim().toLowerCase();
+        const kode = (document.getElementById('filter-kode')?.value || '').trim().toLowerCase();
+
+        Array.from(tbody.querySelectorAll('tr')).forEach(tr => {
+            const cells = Array.from(tr.cells).map(c => c.innerText.trim().toLowerCase());
+            // if kode filter provided, require match on kode_kantor column (index 5)
+            let visible = true;
+            if (kode) {
+                const kodeCell = (cells[5] || '');
+                if (!kodeCell.includes(kode)) visible = false;
+            }
+            if (q) {
+                // match q across id_perangkat, username, nama_lengkap, kode_kantor
+                const hay = [cells[0] || '', cells[3] || '', cells[4] || '', cells[5] || ''].join(' ');
+                if (!hay.includes(q)) visible = false;
+            }
+            tr.style.display = visible ? '' : 'none';
+        });
+    }
+
+    // hook inputs to auto-filter
+    document.addEventListener('DOMContentLoaded', function () {
+        const s = document.getElementById('global-search');
+        const k = document.getElementById('filter-kode');
+        if (s) s.addEventListener('input', filterTable);
+        if (k) k.addEventListener('input', filterTable);
+        // apply initial filter if inputs already have values
+        filterTable();
+    });
 </script>
 
 @if(session('success'))
